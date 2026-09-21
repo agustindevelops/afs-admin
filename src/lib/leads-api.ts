@@ -31,13 +31,18 @@ export type CreateLeadAnswerInput = {
 export type CreateLeadContactInput = {
   firstName?: string;
   lastName?: string;
+  fullName?: string;
   email?: string;
   phone?: string;
+  zip?: string;
   preferredCallTime?: string;
 };
 
 export type CreateLeadBody = {
   flowSlug?: string;
+  source?: string;
+  coverageType?: string;
+  message?: string;
   answers?: CreateLeadAnswerInput[];
   contact?: CreateLeadContactInput;
 };
