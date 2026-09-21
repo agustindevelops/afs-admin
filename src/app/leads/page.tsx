@@ -12,9 +12,18 @@ import {
 } from "@/components/ui/table";
 import type { LeadSource, Prisma } from "@/generated/prisma/client";
 import {
+  INITIAL_LEAD_STATUS_CODE,
+  LEAD_SORTS,
+  type LeadSort,
+  leadListHref,
+  parseLeadSort,
+  statusBadgeVariant,
+} from "@/lib/lead-status";
+import {
   COVERAGE_LABELS,
   coverageLabel,
   displayName,
+  leadListOrderBy,
   sourceLabel,
 } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
@@ -25,7 +34,48 @@ type SearchParams = Promise<{
   status?: string;
   coverage?: string;
   source?: string;
+  sort?: string;
 }>;
+
+function SortableHead({
+  label,
+  asc,
+  desc,
+  sort,
+  hrefFor,
+}: {
+  label: string;
+  asc: LeadSort;
+  desc: LeadSort;
+  sort: LeadSort;
+  hrefFor: (next: LeadSort) => string;
+}) {
+  const active = sort === asc || sort === desc;
+  const next = sort === asc ? desc : asc;
+  const indicator = sort === asc ? "↑" : sort === desc ? "↓" : "↕";
+
+  return (
+    <TableHead
+      className="text-brand-navy-900"
+      aria-sort={
+        sort === asc ? "ascending" : sort === desc ? "descending" : "none"
+      }
+    >
+      <Link
+        href={hrefFor(next)}
+        className={cn(
+          "inline-flex items-center gap-1 rounded-sm hover:text-brand-link focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-brand-blue-700",
+          active && "text-brand-navy-950",
+        )}
+      >
+        {label}
+        <span className="text-xs text-text-muted" aria-hidden>
+          {indicator}
+        </span>
+      </Link>
+    </TableHead>
+  );
+}
 
 export default async function LeadsPage({
   searchParams,
@@ -33,12 +83,13 @@ export default async function LeadsPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const statusCode = params.status ?? "NEW";
+  const statusCode = params.status ?? INITIAL_LEAD_STATUS_CODE;
   const coverage = params.coverage || undefined;
   const source = params.source || undefined;
+  const sort = parseLeadSort(params.sort);
 
   const statuses = await prisma.leadStatus.findMany({
-    orderBy: { id: "asc" },
+    orderBy: { sortOrder: "asc" },
   });
 
   const where: Prisma.LeadWhereInput = {};
@@ -58,20 +109,27 @@ export default async function LeadsPage({
       status: true,
       user: { include: { profile: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: leadListOrderBy(sort),
   });
 
   const coverageOptions = Object.entries(COVERAGE_LABELS);
+  const hrefFor = (nextSort: LeadSort) =>
+    leadListHref({
+      status: statusCode,
+      coverage,
+      source,
+      sort: nextSort,
+    });
 
   return (
     <AdminShell
       title="Leads"
-      description="Newest submissions first. Default view is NEW."
+      description="Quote and agent-assistance submissions. Default view is unseen leads."
     >
       <form
         className={cn(
           cardClassName,
-          "mb-6 grid gap-3 p-4 sm:grid-cols-4",
+          "mb-6 grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5",
         )}
       >
         <label className="grid gap-1.5 text-sm font-medium text-brand-navy-950">
@@ -116,9 +174,19 @@ export default async function LeadsPage({
             <option value="INTAKE_FLOW">Intake flow</option>
           </select>
         </label>
+        <label className="grid gap-1.5 text-sm font-medium text-brand-navy-950">
+          Sort
+          <select name="sort" defaultValue={sort} className={fieldClassName}>
+            {LEAD_SORTS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="flex items-end">
           <Button type="submit" className="w-full">
-            Apply filters
+            Apply
           </Button>
         </div>
       </form>
@@ -127,11 +195,35 @@ export default async function LeadsPage({
         <Table>
           <TableHeader>
             <TableRow className="border-border-subtle hover:bg-transparent">
-              <TableHead className="text-brand-navy-900">Person</TableHead>
-              <TableHead className="text-brand-navy-900">Coverage</TableHead>
+              <SortableHead
+                label="Person"
+                asc="name_asc"
+                desc="name_desc"
+                sort={sort}
+                hrefFor={hrefFor}
+              />
+              <SortableHead
+                label="Coverage"
+                asc="coverage_asc"
+                desc="coverage_desc"
+                sort={sort}
+                hrefFor={hrefFor}
+              />
               <TableHead className="text-brand-navy-900">Source</TableHead>
-              <TableHead className="text-brand-navy-900">Status</TableHead>
-              <TableHead className="text-brand-navy-900">Created</TableHead>
+              <SortableHead
+                label="Status"
+                asc="status_asc"
+                desc="status_desc"
+                sort={sort}
+                hrefFor={hrefFor}
+              />
+              <SortableHead
+                label="Created"
+                asc="created_asc"
+                desc="created_desc"
+                sort={sort}
+                hrefFor={hrefFor}
+              />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -168,11 +260,7 @@ export default async function LeadsPage({
                     {sourceLabel(lead.source)}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        lead.status.code === "NEW" ? "default" : "secondary"
-                      }
-                    >
+                    <Badge variant={statusBadgeVariant(lead.status.code)}>
                       {lead.status.label}
                     </Badge>
                   </TableCell>

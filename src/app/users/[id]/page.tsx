@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { statusBadgeVariant } from "@/lib/lead-status";
 import { coverageLabel, displayName, sourceLabel } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
 import {
@@ -130,11 +131,7 @@ export default async function UserProfilePage({ params }: { params: Params }) {
                     {sourceLabel(lead.source)}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        lead.status.code === "NEW" ? "default" : "secondary"
-                      }
-                    >
+                    <Badge variant={statusBadgeVariant(lead.status.code)}>
                       {lead.status.label}
                     </Badge>
                   </TableCell>

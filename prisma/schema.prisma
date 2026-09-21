@@ -107,10 +107,13 @@ model LeadStatus {
   code        String   @unique
   label       String
   description String
+  sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   leads Lead[]
+
+  @@index([sortOrder])
 }
 
 model PreferredCallTime {

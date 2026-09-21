@@ -8,53 +8,14 @@ import {
   QuestionOutcome,
   UserRole,
 } from "../src/generated/prisma/client";
+import {
+  LEAD_STATUS_WORKFLOW,
+  LEGACY_LEAD_STATUS_MAP,
+} from "../src/lib/lead-status";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
-
-const LEAD_STATUSES = [
-  {
-    code: "NEW",
-    label: "New",
-    description: "Lead was just created / submitted",
-  },
-  {
-    code: "CONTACTED",
-    label: "Contacted",
-    description: "Initial outreach has been made",
-  },
-  {
-    code: "ENGAGED",
-    label: "Engaged",
-    description: "Lead has responded or shown interest",
-  },
-  {
-    code: "QUALIFIED",
-    label: "Qualified",
-    description: "Lead is a legitimate potential customer",
-  },
-  {
-    code: "NURTURING",
-    label: "Nurturing",
-    description: "Interested, but not ready to move forward yet",
-  },
-  {
-    code: "UNQUALIFIED",
-    label: "Unqualified",
-    description: "Not a good fit / does not meet requirements",
-  },
-  {
-    code: "CONVERTED",
-    label: "Converted",
-    description: "Lead became a client/customer",
-  },
-  {
-    code: "LOST",
-    label: "Lost",
-    description: "Qualified lead decided not to proceed",
-  },
-] as const;
 
 type CoverageKey =
   | "under_65"
@@ -141,15 +102,32 @@ const PREFERRED_CALL_TIMES = [
 ] as const;
 
 async function seedLeadStatuses() {
-  for (const status of LEAD_STATUSES) {
+  for (const status of LEAD_STATUS_WORKFLOW) {
     await prisma.leadStatus.upsert({
       where: { code: status.code },
       update: {
         label: status.label,
         description: status.description,
+        sortOrder: status.sortOrder,
       },
       create: status,
     });
+  }
+
+  for (const [legacyCode, nextCode] of Object.entries(LEGACY_LEAD_STATUS_MAP)) {
+    const legacy = await prisma.leadStatus.findUnique({
+      where: { code: legacyCode },
+    });
+    if (!legacy) continue;
+
+    const next = await prisma.leadStatus.findUniqueOrThrow({
+      where: { code: nextCode },
+    });
+    await prisma.lead.updateMany({
+      where: { statusId: legacy.id },
+      data: { statusId: next.id },
+    });
+    await prisma.leadStatus.delete({ where: { id: legacy.id } });
   }
 }
 
@@ -296,11 +274,14 @@ async function seedIntakeFlow() {
 }
 
 async function seedDemoLeads() {
-  const newStatus = await prisma.leadStatus.findUniqueOrThrow({
-    where: { code: "NEW" },
+  const unseenStatus = await prisma.leadStatus.findUniqueOrThrow({
+    where: { code: "UNSEEN" },
   });
-  const contactedStatus = await prisma.leadStatus.findUniqueOrThrow({
-    where: { code: "CONTACTED" },
+  const seenStatus = await prisma.leadStatus.findUniqueOrThrow({
+    where: { code: "SEEN" },
+  });
+  const calledStatus = await prisma.leadStatus.findUniqueOrThrow({
+    where: { code: "CALLED" },
   });
   const morningCallTime = await prisma.preferredCallTime.findUniqueOrThrow({
     where: { code: "morning" },
@@ -374,7 +355,7 @@ async function seedDemoLeads() {
   const lead = await prisma.lead.create({
     data: {
       userId: maria.id,
-      statusId: newStatus.id,
+      statusId: unseenStatus.id,
       flowId: flow.id,
       preferredCallTimeId: morningCallTime.id,
       source: LeadSource.INTAKE_FLOW,
@@ -403,7 +384,7 @@ async function seedDemoLeads() {
   await prisma.lead.create({
     data: {
       userId: maria.id,
-      statusId: contactedStatus.id,
+      statusId: calledStatus.id,
       source: LeadSource.QUOTE_FORM,
       coverageType: "dental_vision",
       message: "Earlier quote request for dental only.",
@@ -414,7 +395,7 @@ async function seedDemoLeads() {
   await prisma.lead.create({
     data: {
       userId: james.id,
-      statusId: newStatus.id,
+      statusId: seenStatus.id,
       source: LeadSource.QUOTE_FORM,
       coverageType: "on_medicare",
       message: "Turning 66 next month, want a plan review.",

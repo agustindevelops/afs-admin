@@ -1,3 +1,6 @@
+import type { Prisma } from "@/generated/prisma/client";
+import { type LeadSort } from "@/lib/lead-status";
+
 const COVERAGE_LABELS: Record<string, string> = {
   under_65: "Under 65",
   turning_65: "Turning 65",
@@ -44,6 +47,37 @@ export function formatAnswerValue(value: unknown) {
     return JSON.stringify(value);
   }
   return String(value);
+}
+
+export function leadListOrderBy(
+  sort: LeadSort,
+): Prisma.LeadOrderByWithRelationInput[] {
+  switch (sort) {
+    case "created_asc":
+      return [{ createdAt: "asc" }];
+    case "name_asc":
+      return [
+        { user: { profile: { lastName: "asc" } } },
+        { user: { profile: { firstName: "asc" } } },
+        { createdAt: "desc" },
+      ];
+    case "name_desc":
+      return [
+        { user: { profile: { lastName: "desc" } } },
+        { user: { profile: { firstName: "desc" } } },
+        { createdAt: "desc" },
+      ];
+    case "status_asc":
+      return [{ status: { sortOrder: "asc" } }, { createdAt: "desc" }];
+    case "status_desc":
+      return [{ status: { sortOrder: "desc" } }, { createdAt: "desc" }];
+    case "coverage_asc":
+      return [{ coverageType: "asc" }, { createdAt: "desc" }];
+    case "coverage_desc":
+      return [{ coverageType: "desc" }, { createdAt: "desc" }];
+    default:
+      return [{ createdAt: "desc" }];
+  }
 }
 
 export { COVERAGE_LABELS };

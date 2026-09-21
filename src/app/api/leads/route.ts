@@ -12,6 +12,8 @@ import {
   leadListInclude,
   normalizeEmail,
 } from "@/lib/leads-api";
+import { INITIAL_LEAD_STATUS_CODE, parseLeadSort } from "@/lib/lead-status";
+import { leadListOrderBy } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/with-auth";
 
@@ -183,11 +185,11 @@ export async function POST(request: Request) {
     }
   }
 
-  const newStatus = await prisma.leadStatus.findUnique({
-    where: { code: "NEW" },
+  const initialStatus = await prisma.leadStatus.findUnique({
+    where: { code: INITIAL_LEAD_STATUS_CODE },
   });
-  if (!newStatus) {
-    return jsonError("NEW lead status is not configured", 500);
+  if (!initialStatus) {
+    return jsonError("UNSEEN lead status is not configured", 500);
   }
 
   const lead = await prisma.$transaction(async (tx) => {
@@ -233,7 +235,7 @@ export async function POST(request: Request) {
     const created = await tx.lead.create({
       data: {
         userId: user.id,
-        statusId: newStatus.id,
+        statusId: initialStatus.id,
         flowId: flow.id,
         preferredCallTimeId: callTime.id,
         source: LeadSource.INTAKE_FLOW,
@@ -257,6 +259,7 @@ export const GET = withAuth(async (request) => {
   const statusCode = searchParams.get("status") || undefined;
   const coverage = searchParams.get("coverage") || undefined;
   const source = searchParams.get("source") || undefined;
+  const sort = parseLeadSort(searchParams.get("sort") ?? undefined);
 
   const where: Prisma.LeadWhereInput = {};
   if (statusCode && statusCode !== "ALL") {
@@ -272,7 +275,7 @@ export const GET = withAuth(async (request) => {
   const leads = await prisma.lead.findMany({
     where,
     include: leadListInclude,
-    orderBy: { createdAt: "desc" },
+    orderBy: leadListOrderBy(sort),
   });
 
   return Response.json({ leads });

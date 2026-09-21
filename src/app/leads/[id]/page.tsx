@@ -4,6 +4,7 @@ import { updateLeadStatus } from "@/app/leads/actions";
 import { AdminShell } from "@/components/admin-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { statusBadgeVariant } from "@/lib/lead-status";
 import {
   coverageLabel,
   displayName,
@@ -56,7 +57,7 @@ export default async function LeadDetailPage({
         },
       },
     }),
-    prisma.leadStatus.findMany({ orderBy: { id: "asc" } }),
+    prisma.leadStatus.findMany({ orderBy: { sortOrder: "asc" } }),
   ]);
 
   if (!lead) {
@@ -183,10 +184,38 @@ export default async function LeadDetailPage({
         <aside className="space-y-4">
           <div className={cn(cardClassName, "p-5")}>
             <h2 className={cn(sectionLabelClassName, "mb-3")}>Status</h2>
+            <ol className="mb-4 flex flex-col gap-2">
+              {statuses.map((status, index) => {
+                const current = status.code === lead.status.code;
+                return (
+                  <li key={status.code} className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
+                        current
+                          ? "bg-brand-gold-500 text-brand-navy-950"
+                          : "bg-surface-subtle text-text-secondary",
+                      )}
+                      aria-current={current ? "step" : undefined}
+                    >
+                      {index + 1}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-sm",
+                        current
+                          ? "font-semibold text-brand-navy-950"
+                          : "text-text-secondary",
+                      )}
+                    >
+                      {status.label}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
             <div className="mb-4">
-              <Badge
-                variant={lead.status.code === "NEW" ? "default" : "secondary"}
-              >
+              <Badge variant={statusBadgeVariant(lead.status.code)}>
                 {lead.status.label}
               </Badge>
               <p className="mt-2 text-xs text-text-muted">
