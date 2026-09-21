@@ -27,6 +27,7 @@ import {
   sourceLabel,
 } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
 import { cardClassName, fieldClassName } from "@/lib/ui";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +83,7 @@ export default async function LeadsPage({
 }: {
   searchParams: SearchParams;
 }) {
+  await requireAdmin();
   const params = await searchParams;
   const statusCode = params.status ?? INITIAL_LEAD_STATUS_CODE;
   const coverage = params.coverage || undefined;

@@ -12,6 +12,7 @@ import {
   sourceLabel,
 } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
 import {
   cardClassName,
   fieldClassName,
@@ -30,6 +31,7 @@ export default async function LeadDetailPage({
   params: Params;
   searchParams: SearchParams;
 }) {
+  await requireAdmin();
   const { id } = await params;
   const { error } = await searchParams;
   const leadId = Number(id);

@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
 
 export async function updateLeadStatus(formData: FormData) {
+  await requireAdmin();
   const leadId = Number(formData.get("leadId"));
   const statusCode = String(formData.get("statusCode") ?? "");
 

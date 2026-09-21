@@ -13,6 +13,7 @@ import {
 import { statusBadgeVariant } from "@/lib/lead-status";
 import { coverageLabel, displayName, sourceLabel } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
 import {
   cardClassName,
   linkClassName,
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 type Params = Promise<{ id: string }>;
 
 export default async function UserProfilePage({ params }: { params: Params }) {
+  await requireAdmin();
   const { id } = await params;
   const userId = Number(id);
 

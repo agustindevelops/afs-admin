@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/require-admin";
 
 export async function AdminShell({
   children,
@@ -12,7 +12,7 @@ export async function AdminShell({
   title: string;
   description?: string;
 }) {
-  const session = await auth();
+  const session = await requireAdmin();
 
   return (
     <div className="min-h-full bg-surface-page">
