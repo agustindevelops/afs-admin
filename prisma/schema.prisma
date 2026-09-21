@@ -113,6 +113,17 @@ model LeadStatus {
   leads Lead[]
 }
 
+model PreferredCallTime {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  label     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads Lead[]
+}
+
 model IntakeFlow {
   id        Int      @id @default(autoincrement())
   slug      String   @unique
@@ -169,23 +180,26 @@ model QuestionEdge {
 }
 
 model Lead {
-  id           Int        @id @default(autoincrement())
-  userId       Int
-  statusId     Int
-  flowId       Int?
-  source       LeadSource
-  coverageType String?
-  message      String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id                  Int        @id @default(autoincrement())
+  userId              Int
+  statusId            Int
+  flowId              Int?
+  preferredCallTimeId Int?
+  source              LeadSource
+  coverageType        String?
+  message             String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
-  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status  LeadStatus   @relation(fields: [statusId], references: [id])
-  flow    IntakeFlow?  @relation(fields: [flowId], references: [id], onDelete: SetNull)
-  answers LeadAnswer[]
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status            LeadStatus         @relation(fields: [statusId], references: [id])
+  flow              IntakeFlow?        @relation(fields: [flowId], references: [id], onDelete: SetNull)
+  preferredCallTime PreferredCallTime? @relation(fields: [preferredCallTimeId], references: [id], onDelete: SetNull)
+  answers           LeadAnswer[]
 
   @@index([userId])
   @@index([statusId])
+  @@index([preferredCallTimeId])
   @@index([createdAt])
   @@index([coverageType])
   @@index([source])

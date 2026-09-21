@@ -1,14 +1,10 @@
 const COVERAGE_LABELS: Record<string, string> = {
   under_65: "Under 65",
   turning_65: "Turning 65",
-  no_medicare_yet: "65+ without Medicare",
   on_medicare: "Already on Medicare",
   dental_vision: "Dental & Vision",
   life: "Life Insurance",
-  mortgage: "Mortgage Protection",
-  funeral: "Funeral Plans",
-  travel: "Travel",
-  something_else: "Something else",
+  travel: "Travel / Study Abroad",
 };
 
 const SOURCE_LABELS: Record<string, string> = {

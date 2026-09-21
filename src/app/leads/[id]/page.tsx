@@ -42,6 +42,7 @@ export default async function LeadDetailPage({
       where: { id: leadId },
       include: {
         status: true,
+        preferredCallTime: true,
         flow: true,
         user: { include: { profile: true } },
         answers: {
@@ -120,6 +121,12 @@ export default async function LeadDetailPage({
                 <dt className="text-xs text-text-muted">Source</dt>
                 <dd className="text-text-secondary">
                   {sourceLabel(lead.source)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-text-muted">Preferred call time</dt>
+                <dd className="text-text-secondary">
+                  {lead.preferredCallTime?.label ?? "—"}
                 </dd>
               </div>
             </dl>

@@ -59,265 +59,86 @@ const LEAD_STATUSES = [
 type CoverageKey =
   | "under_65"
   | "turning_65"
-  | "no_medicare_yet"
   | "on_medicare"
   | "dental_vision"
   | "life"
-  | "mortgage"
-  | "funeral"
-  | "travel"
-  | "something_else";
+  | "travel";
+
+const HEALTH_MEDICARE_CONCERNS = [
+  { key: "monthly_cost", label: "What it costs me each month" },
+  { key: "doctors", label: "Keeping my doctors" },
+  { key: "prescriptions", label: "What my prescriptions cost" },
+  { key: "hospital_bill", label: "The bill that lands after a hospital stay" },
+  { key: "family", label: "My family" },
+] as const;
+
+const DENTAL_VISION_CONCERNS = [
+  { key: "monthly_cost", label: "What it costs me each month" },
+  { key: "dentist", label: "Whether my dentist takes it" },
+  { key: "eye_doctor", label: "Whether my eye doctor takes it" },
+  { key: "waiting_period", label: "How soon I can use it" },
+] as const;
+
+const LIFE_CONCERNS = [
+  { key: "monthly_cost", label: "What it costs me each month" },
+  { key: "family_left", label: "What my family would be left with" },
+  { key: "term_or_permanent", label: "Whether I need term or permanent" },
+  { key: "how_much", label: "How much cover I actually need" },
+] as const;
 
 const COVERAGES: {
   key: CoverageKey;
   label: string;
   description: string;
-  concerns: { key: string; label: string }[];
-  channels: {
-    key: string;
-    label: string;
-    description: string;
-    outcome?: QuestionOutcome;
-    toAgent?: boolean;
-  }[];
+  concernGroup: "health" | "medicare" | "dental_vision" | "life" | null;
 }[] = [
   {
     key: "under_65",
-    label: "I'm under 65",
-    description: "Individual & family health through the marketplace.",
-    concerns: [
-      { key: "cost", label: "Premiums or deductibles feel too high" },
-      { key: "doctors", label: "I need to keep my doctors" },
-      { key: "lost_coverage", label: "I lost coverage and need to enroll" },
-      { key: "compare", label: "I want to compare plans before I decide" },
-    ],
-    channels: [
-      {
-        key: "agent",
-        label: "Talk to a licensed agent",
-        description:
-          "Answer a few questions and we call you with options that fit.",
-        toAgent: true,
-      },
-      {
-        key: "self_enroll",
-        label: "Apply on my own",
-        description: "Go to the marketplace enrollment tool.",
-        outcome: QuestionOutcome.REDIRECT,
-      },
-    ],
+    label: "I'm under 65 and buying my own coverage",
+    description: "Health plans through the marketplace.",
+    concernGroup: "health",
   },
   {
     key: "turning_65",
-    label: "I will be turning 65 within 6 months",
+    label: "I will turn 65 within 12 months",
     description: "Medicare, before your window opens.",
-    concerns: [
-      { key: "when_to_enroll", label: "I'm not sure when to enroll" },
-      { key: "parts", label: "I don't understand Parts A, B, C, and D" },
-      { key: "penalties", label: "I want to avoid late enrollment penalties" },
-      { key: "compare", label: "I want to compare Advantage and Supplemental" },
-    ],
-    channels: [
-      {
-        key: "agent",
-        label: "Talk to a licensed agent",
-        description: "Share your details and sign your Scope of Appointment.",
-        toAgent: true,
-      },
-      {
-        key: "self_enroll",
-        label: "Apply on my own",
-        description: "Compare plans and enroll yourself.",
-        outcome: QuestionOutcome.REDIRECT,
-      },
-    ],
-  },
-  {
-    key: "no_medicare_yet",
-    label: "I'm 65 or older but I don't have Medicare yet",
-    description: "Get enrolled and understand your options.",
-    concerns: [
-      { key: "start_now", label: "I need to get Medicare started" },
-      { key: "still_working", label: "I'm still working and have other coverage" },
-      { key: "spouse", label: "I'm helping a spouse enroll" },
-      { key: "confused", label: "I'm overwhelmed and need guidance" },
-    ],
-    channels: [
-      {
-        key: "agent",
-        label: "Talk to a licensed agent",
-        description: "We walk you through enrollment and plan choices.",
-        toAgent: true,
-      },
-      {
-        key: "self_enroll",
-        label: "Apply on my own",
-        description: "Use the Medicare enrollment tools yourself.",
-        outcome: QuestionOutcome.REDIRECT,
-      },
-    ],
+    concernGroup: "medicare",
   },
   {
     key: "on_medicare",
-    label: "I'm already on Medicare but want a plan change",
+    label: "I'm already on Medicare",
     description: "Review or change what you have.",
-    concerns: [
-      { key: "costs", label: "My costs went up" },
-      { key: "doctors", label: "My doctors or pharmacy changed" },
-      { key: "drugs", label: "My prescriptions aren't covered well" },
-      { key: "annual", label: "I want an annual plan review" },
-    ],
-    channels: [
-      {
-        key: "agent",
-        label: "Talk to a licensed agent",
-        description: "Scope of Appointment first, then we compare options.",
-        toAgent: true,
-      },
-      {
-        key: "self_enroll",
-        label: "Apply on my own",
-        description: "Enter doctors and medications, then compare plans.",
-        outcome: QuestionOutcome.REDIRECT,
-      },
-    ],
+    concernGroup: "medicare",
   },
   {
     key: "dental_vision",
-    label: "I want dental or vision",
+    label: "I want dental and/or vision",
     description: "Compare carriers and keep your providers.",
-    concerns: [
-      { key: "dentist", label: "I need my dentist in-network" },
-      { key: "eye", label: "I need my eye doctor in-network" },
-      { key: "both", label: "I want both dental and vision" },
-      { key: "price", label: "I want the most affordable option" },
-    ],
-    channels: [
-      {
-        key: "agent",
-        label: "Talk to a licensed agent",
-        description: "Tell us which providers you want to keep.",
-        toAgent: true,
-      },
-      {
-        key: "self_enroll",
-        label: "Apply on my own",
-        description: "Compare dental and vision plans yourself.",
-        outcome: QuestionOutcome.REDIRECT,
-      },
-    ],
+    concernGroup: "dental_vision",
   },
   {
     key: "life",
-    label: "I want life insurance",
-    description: "Term, permanent, and how much you need.",
-    concerns: [
-      { key: "family", label: "I want to protect my family" },
-      { key: "how_much", label: "I'm not sure how much coverage I need" },
-      { key: "affordable", label: "I need something affordable" },
-      { key: "existing", label: "I want to review a policy I already have" },
-    ],
-    channels: [
-      {
-        key: "agent",
-        label: "Talk to a licensed agent",
-        description: "Send your details and we pick up the conversation.",
-        toAgent: true,
-      },
-      {
-        key: "self_enroll",
-        label: "Explore on my own",
-        description: "Start with a needs calculator, then apply.",
-        outcome: QuestionOutcome.REDIRECT,
-      },
-    ],
-  },
-  {
-    key: "mortgage",
-    label: "I want mortgage protection",
-    description: "Coverage tied to your home and loan.",
-    concerns: [
-      { key: "payoff", label: "I want the mortgage paid if something happens" },
-      { key: "family_home", label: "I want my family to keep the house" },
-      { key: "cost", label: "I need to know what it costs monthly" },
-      { key: "compare", label: "I want to compare options" },
-    ],
-    channels: [
-      {
-        key: "agent",
-        label: "Talk to a licensed agent",
-        description: "We review your loan and recommend coverage.",
-        toAgent: true,
-        outcome: QuestionOutcome.CREATE_LEAD,
-      },
-    ],
-  },
-  {
-    key: "funeral",
-    label: "I am interested in a funeral plan",
-    description: "Final expense and funeral planning.",
-    concerns: [
-      { key: "not_burden", label: "I don't want to burden my family" },
-      { key: "costs", label: "I want to lock in funeral costs" },
-      { key: "simple", label: "I want something simple to set up" },
-      { key: "existing", label: "I already have a plan and need advice" },
-    ],
-    channels: [
-      {
-        key: "agent",
-        label: "Talk to a licensed agent",
-        description: "We explain options and next steps.",
-        toAgent: true,
-        outcome: QuestionOutcome.CREATE_LEAD,
-      },
-    ],
+    label: "I want to protect my family",
+    description: "Life insurance, and how much you need.",
+    concernGroup: "life",
   },
   {
     key: "travel",
-    label: "I plan to travel abroad",
+    label: "I'm traveling abroad / Study Abroad",
     description: "Cover that works past the border.",
-    concerns: [
-      { key: "destination", label: "I need cover for a specific trip" },
-      { key: "medical", label: "I'm worried about medical care overseas" },
-      { key: "length", label: "I'll be gone for an extended period" },
-      { key: "family", label: "I'm traveling with family" },
-    ],
-    channels: [
-      {
-        key: "agent",
-        label: "Talk to a licensed agent",
-        description: "Share dates and destination before you buy.",
-        toAgent: true,
-      },
-      {
-        key: "self_enroll",
-        label: "See travel plans and buy",
-        description: "Pick dates, destination, and age, then purchase.",
-        outcome: QuestionOutcome.REDIRECT,
-      },
-    ],
-  },
-  {
-    key: "something_else",
-    label: "Something else",
-    description: "Tell us what you need and we'll point you the right way.",
-    concerns: [
-      { key: "unsure", label: "I'm not sure what coverage I need" },
-      { key: "multiple", label: "I need help with more than one product" },
-      { key: "referral", label: "Someone referred me and I have questions" },
-      { key: "other", label: "Something not listed above" },
-    ],
-    channels: [
-      {
-        key: "agent",
-        label: "Talk to a licensed agent",
-        description: "Tell us what you need and the best time to call.",
-        toAgent: true,
-        outcome: QuestionOutcome.CREATE_LEAD,
-      },
-    ],
+    concernGroup: null,
   },
 ];
+
+const PREFERRED_CALL_TIMES = [
+  { code: "morning", label: "Morning", sortOrder: 1 },
+  { code: "afternoon", label: "Afternoon", sortOrder: 2 },
+  {
+    code: "evening_weekend",
+    label: "Evening / weekend by appointment",
+    sortOrder: 3,
+  },
+] as const;
 
 async function seedLeadStatuses() {
   for (const status of LEAD_STATUSES) {
@@ -328,6 +149,19 @@ async function seedLeadStatuses() {
         description: status.description,
       },
       create: status,
+    });
+  }
+}
+
+async function seedPreferredCallTimes() {
+  for (const option of PREFERRED_CALL_TIMES) {
+    await prisma.preferredCallTime.upsert({
+      where: { code: option.code },
+      update: {
+        label: option.label,
+        sortOrder: option.sortOrder,
+      },
+      create: option,
     });
   }
 }
@@ -358,210 +192,105 @@ async function seedIntakeFlow() {
     data: {
       flowId: flow.id,
       key: "coverage",
-      prompt: "Which coverage do you need?",
-      helpText: "Pick the option that fits you best right now.",
+      prompt: "How can we help you?",
+      helpText: "Two quick questions, then your contact details.",
       answerType: AnswerType.SINGLE,
       mapsToLeadField: "coverageType",
       sortOrder: 1,
     },
   });
 
-  const fullName = await prisma.question.create({
+  const concernHealth = await prisma.question.create({
     data: {
       flowId: flow.id,
-      key: "full_name",
-      prompt: "What is your full name?",
-      answerType: AnswerType.TEXT,
-      mapsToLeadField: "fullName",
-      sortOrder: 100,
-    },
-  });
-
-  const email = await prisma.question.create({
-    data: {
-      flowId: flow.id,
-      key: "email",
-      prompt: "What is your email?",
-      answerType: AnswerType.EMAIL,
-      mapsToLeadField: "email",
-      sortOrder: 101,
-    },
-  });
-
-  const phone = await prisma.question.create({
-    data: {
-      flowId: flow.id,
-      key: "phone",
-      prompt: "What is the best number to reach you?",
-      answerType: AnswerType.PHONE,
-      mapsToLeadField: "phone",
-      sortOrder: 102,
-    },
-  });
-
-  const zip = await prisma.question.create({
-    data: {
-      flowId: flow.id,
-      key: "zip",
-      prompt: "What is your ZIP code?",
-      answerType: AnswerType.ZIP,
-      mapsToLeadField: "zip",
-      sortOrder: 103,
-    },
-  });
-
-  const callTime = await prisma.question.create({
-    data: {
-      flowId: flow.id,
-      key: "best_time_to_call",
-      prompt: "When is the best time to call?",
+      key: "concern_health",
+      prompt: "What worries you the most?",
+      helpText: "Your answer helps us prepare — every option continues the same way.",
       answerType: AnswerType.SINGLE,
-      mapsToLeadField: "preferredCallTime",
-      sortOrder: 104,
+      sortOrder: 10,
     },
   });
 
-  const notes = await prisma.question.create({
+  const concernMedicare = await prisma.question.create({
     data: {
       flowId: flow.id,
-      key: "notes",
-      prompt: "Anything you want us to know first?",
-      helpText:
-        "You can list other coverage interests beyond your original selection.",
-      answerType: AnswerType.TEXT,
-      mapsToLeadField: "message",
-      sortOrder: 105,
+      key: "concern_medicare",
+      prompt: "What worries you the most?",
+      helpText: "Your answer helps us prepare — every option continues the same way.",
+      answerType: AnswerType.SINGLE,
+      sortOrder: 11,
     },
   });
 
-  for (const [index, option] of [
-    { key: "morning", label: "Morning" },
-    { key: "afternoon", label: "Afternoon" },
-    { key: "evening_weekend", label: "Evening / weekend by appointment" },
-  ].entries()) {
-    await prisma.questionEdge.create({
-      data: {
-        fromQuestionId: callTime.id,
-        toQuestionId: notes.id,
-        choiceKey: option.key,
-        choiceLabel: option.label,
-        sortOrder: index + 1,
-      },
-    });
-  }
-
-  await prisma.questionEdge.create({
+  const concernDentalVision = await prisma.question.create({
     data: {
-      fromQuestionId: notes.id,
-      toQuestionId: null,
-      choiceKey: "submit",
-      choiceLabel: "Submit request",
-      choiceDescription: "Creates a lead for follow-up.",
-      outcome: QuestionOutcome.CREATE_LEAD,
-      sortOrder: 1,
+      flowId: flow.id,
+      key: "concern_dental_vision",
+      prompt: "What worries you the most?",
+      helpText: "Your answer helps us prepare — every option continues the same way.",
+      answerType: AnswerType.SINGLE,
+      sortOrder: 12,
     },
   });
+
+  const concernLife = await prisma.question.create({
+    data: {
+      flowId: flow.id,
+      key: "concern_life",
+      prompt: "What worries you the most?",
+      helpText: "Your answer helps us prepare — every option continues the same way.",
+      answerType: AnswerType.SINGLE,
+      sortOrder: 13,
+    },
+  });
+
+  const concernByGroup = {
+    health: concernHealth,
+    medicare: concernMedicare,
+    dental_vision: concernDentalVision,
+    life: concernLife,
+  } as const;
+
+  const concernsByGroup = {
+    health: HEALTH_MEDICARE_CONCERNS,
+    medicare: HEALTH_MEDICARE_CONCERNS,
+    dental_vision: DENTAL_VISION_CONCERNS,
+    life: LIFE_CONCERNS,
+  } as const;
 
   for (const [coverageIndex, coverageOption] of COVERAGES.entries()) {
-    const concern = await prisma.question.create({
-      data: {
-        flowId: flow.id,
-        key: `concern_${coverageOption.key}`,
-        prompt: "What worries you the most?",
-        helpText: coverageOption.description,
-        answerType: AnswerType.SINGLE,
-        sortOrder: 10 + coverageIndex,
-      },
-    });
-
-    const channel = await prisma.question.create({
-      data: {
-        flowId: flow.id,
-        key: `channel_${coverageOption.key}`,
-        prompt: "How would you like to do this?",
-        helpText: "Nothing here signs you up for anything. You choose what happens next.",
-        answerType: AnswerType.SINGLE,
-        sortOrder: 50 + coverageIndex,
-      },
-    });
+    const goesStraightToContact = coverageOption.concernGroup == null;
 
     await prisma.questionEdge.create({
       data: {
         fromQuestionId: coverage.id,
-        toQuestionId: concern.id,
+        toQuestionId: goesStraightToContact
+          ? null
+          : concernByGroup[coverageOption.concernGroup!].id,
         choiceKey: coverageOption.key,
         choiceLabel: coverageOption.label,
         choiceDescription: coverageOption.description,
+        outcome: goesStraightToContact ? QuestionOutcome.COMPLETE : undefined,
         sortOrder: coverageIndex + 1,
       },
     });
+  }
 
-    for (const [concernIndex, concernOption] of coverageOption.concerns.entries()) {
+  for (const [group, concernQuestion] of Object.entries(concernByGroup)) {
+    const concerns = concernsByGroup[group as keyof typeof concernsByGroup];
+    for (const [concernIndex, concernOption] of concerns.entries()) {
       await prisma.questionEdge.create({
         data: {
-          fromQuestionId: concern.id,
-          toQuestionId: channel.id,
+          fromQuestionId: concernQuestion.id,
+          toQuestionId: null,
           choiceKey: concernOption.key,
           choiceLabel: concernOption.label,
+          outcome: QuestionOutcome.COMPLETE,
           sortOrder: concernIndex + 1,
         },
       });
     }
-
-    for (const [channelIndex, channelOption] of coverageOption.channels.entries()) {
-      const goesToAgent = Boolean(channelOption.toAgent);
-      await prisma.questionEdge.create({
-        data: {
-          fromQuestionId: channel.id,
-          toQuestionId: goesToAgent ? fullName.id : null,
-          choiceKey: channelOption.key,
-          choiceLabel: channelOption.label,
-          choiceDescription: channelOption.description,
-          outcome: goesToAgent
-            ? undefined
-            : (channelOption.outcome ?? QuestionOutcome.REDIRECT),
-          sortOrder: channelIndex + 1,
-        },
-      });
-    }
   }
-
-  await prisma.questionEdge.create({
-    data: {
-      fromQuestionId: fullName.id,
-      toQuestionId: email.id,
-      choiceKey: "continue",
-      choiceLabel: "Continue",
-      sortOrder: 1,
-    },
-  });
-  await prisma.questionEdge.create({
-    data: {
-      fromQuestionId: email.id,
-      toQuestionId: phone.id,
-      choiceKey: "continue",
-      choiceLabel: "Continue",
-      sortOrder: 1,
-    },
-  });
-  await prisma.questionEdge.create({
-    data: {
-      fromQuestionId: phone.id,
-      toQuestionId: zip.id,
-      choiceKey: "continue",
-      choiceLabel: "Continue",
-      sortOrder: 1,
-    },
-  });
-  await prisma.questionEdge.create({
-    data: {
-      fromQuestionId: zip.id,
-      toQuestionId: callTime.id,
-      choiceKey: "continue",
-      choiceLabel: "Continue",
-      sortOrder: 1,
-    },
-  });
 
   return flow;
 }
@@ -573,6 +302,9 @@ async function seedDemoLeads() {
   const contactedStatus = await prisma.leadStatus.findUniqueOrThrow({
     where: { code: "CONTACTED" },
   });
+  const morningCallTime = await prisma.preferredCallTime.findUniqueOrThrow({
+    where: { code: "morning" },
+  });
   const flow = await prisma.intakeFlow.findUniqueOrThrow({
     where: { slug: "home-intake" },
   });
@@ -581,16 +313,7 @@ async function seedDemoLeads() {
     where: { flowId_key: { flowId: flow.id, key: "coverage" } },
   });
   const concernQuestion = await prisma.question.findUniqueOrThrow({
-    where: { flowId_key: { flowId: flow.id, key: "concern_under_65" } },
-  });
-  const channelQuestion = await prisma.question.findUniqueOrThrow({
-    where: { flowId_key: { flowId: flow.id, key: "channel_under_65" } },
-  });
-  const callTimeQuestion = await prisma.question.findUniqueOrThrow({
-    where: { flowId_key: { flowId: flow.id, key: "best_time_to_call" } },
-  });
-  const notesQuestion = await prisma.question.findUniqueOrThrow({
-    where: { flowId_key: { flowId: flow.id, key: "notes" } },
+    where: { flowId_key: { flowId: flow.id, key: "concern_health" } },
   });
 
   const coverageEdge = await prisma.questionEdge.findUniqueOrThrow({
@@ -605,23 +328,7 @@ async function seedDemoLeads() {
     where: {
       fromQuestionId_choiceKey: {
         fromQuestionId: concernQuestion.id,
-        choiceKey: "cost",
-      },
-    },
-  });
-  const channelEdge = await prisma.questionEdge.findUniqueOrThrow({
-    where: {
-      fromQuestionId_choiceKey: {
-        fromQuestionId: channelQuestion.id,
-        choiceKey: "agent",
-      },
-    },
-  });
-  const callTimeEdge = await prisma.questionEdge.findUniqueOrThrow({
-    where: {
-      fromQuestionId_choiceKey: {
-        fromQuestionId: callTimeQuestion.id,
-        choiceKey: "morning",
+        choiceKey: "monthly_cost",
       },
     },
   });
@@ -669,6 +376,7 @@ async function seedDemoLeads() {
       userId: maria.id,
       statusId: newStatus.id,
       flowId: flow.id,
+      preferredCallTimeId: morningCallTime.id,
       source: LeadSource.INTAKE_FLOW,
       coverageType: "under_65",
       message: "Looking for a lower premium for my family of four.",
@@ -687,24 +395,7 @@ async function seedDemoLeads() {
         leadId: lead.id,
         questionId: concernQuestion.id,
         edgeId: concernEdge.id,
-        value: { choiceKey: "cost", label: concernEdge.choiceLabel },
-      },
-      {
-        leadId: lead.id,
-        questionId: channelQuestion.id,
-        edgeId: channelEdge.id,
-        value: { choiceKey: "agent", label: channelEdge.choiceLabel },
-      },
-      {
-        leadId: lead.id,
-        questionId: callTimeQuestion.id,
-        edgeId: callTimeEdge.id,
-        value: { choiceKey: "morning", label: callTimeEdge.choiceLabel },
-      },
-      {
-        leadId: lead.id,
-        questionId: notesQuestion.id,
-        value: "Looking for a lower premium for my family of four.",
+        value: { choiceKey: "monthly_cost", label: concernEdge.choiceLabel },
       },
     ],
   });
@@ -757,11 +448,12 @@ async function seedAdminUser() {
 
 async function main() {
   await seedLeadStatuses();
+  await seedPreferredCallTimes();
   await seedIntakeFlow();
   await seedDemoLeads();
   await seedAdminUser();
   console.log(
-    "Seed complete: lead statuses, home-intake graph, demo leads, admin user.",
+    "Seed complete: lead statuses, preferred call times, home-intake graph, demo leads, admin user.",
   );
 }
 
