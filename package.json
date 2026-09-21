@@ -11,7 +11,7 @@
     "db:down": "docker compose down",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:seed": "prisma db seed",
+    "db:seed": "ALLOW_DB_SEED=1 tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

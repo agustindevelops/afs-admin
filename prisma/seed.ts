@@ -3,7 +3,6 @@ import { hash } from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   AnswerType,
-  LeadSource,
   PrismaClient,
   QuestionOutcome,
   UserRole,
@@ -12,6 +11,35 @@ import {
   LEAD_STATUS_WORKFLOW,
   LEGACY_LEAD_STATUS_MAP,
 } from "../src/lib/lead-status";
+
+/**
+ * Destructive seed. Only runs when ALLOW_DB_SEED=1 is set explicitly
+ * (see `pnpm db:seed`). Not wired into migrate reset / deploy.
+ */
+if (process.env.ALLOW_DB_SEED !== "1") {
+  console.error(
+    [
+      "Refusing to seed: ALLOW_DB_SEED is not set to 1.",
+      "This script removes demo CLIENT users and rewrites reference data.",
+      "It only creates the ADMIN user for dashboard access.",
+      "Run only intentionally: pnpm db:seed",
+    ].join("\n"),
+  );
+  process.exit(1);
+}
+
+if (
+  process.env.VERCEL_ENV === "production" ||
+  process.env.NODE_ENV === "production"
+) {
+  console.error(
+    [
+      "Refusing to seed against a production environment.",
+      "Unset NODE_ENV/VERCEL_ENV production markers, or run against a non-prod DATABASE_URL locally.",
+    ].join("\n"),
+  );
+  process.exit(1);
+}
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -273,134 +301,20 @@ async function seedIntakeFlow() {
   return flow;
 }
 
-async function seedDemoLeads() {
-  const unseenStatus = await prisma.leadStatus.findUniqueOrThrow({
-    where: { code: "UNSEEN" },
-  });
-  const seenStatus = await prisma.leadStatus.findUniqueOrThrow({
-    where: { code: "SEEN" },
-  });
-  const calledStatus = await prisma.leadStatus.findUniqueOrThrow({
-    where: { code: "CALLED" },
-  });
-  const morningCallTime = await prisma.preferredCallTime.findUniqueOrThrow({
-    where: { code: "morning" },
-  });
-  const flow = await prisma.intakeFlow.findUniqueOrThrow({
-    where: { slug: "home-intake" },
-  });
+/** Remove known demo CLIENT accounts only (not real portal leads). */
+const DEMO_CLIENT_EMAILS = [
+  "maria.garcia@example.com",
+  "james.wilson@example.com",
+] as const;
 
-  const coverageQuestion = await prisma.question.findUniqueOrThrow({
-    where: { flowId_key: { flowId: flow.id, key: "coverage" } },
-  });
-  const concernQuestion = await prisma.question.findUniqueOrThrow({
-    where: { flowId_key: { flowId: flow.id, key: "concern_health" } },
-  });
-
-  const coverageEdge = await prisma.questionEdge.findUniqueOrThrow({
+async function deleteDemoClientUsers() {
+  const result = await prisma.user.deleteMany({
     where: {
-      fromQuestionId_choiceKey: {
-        fromQuestionId: coverageQuestion.id,
-        choiceKey: "under_65",
-      },
-    },
-  });
-  const concernEdge = await prisma.questionEdge.findUniqueOrThrow({
-    where: {
-      fromQuestionId_choiceKey: {
-        fromQuestionId: concernQuestion.id,
-        choiceKey: "monthly_cost",
-      },
-    },
-  });
-
-  const maria = await prisma.user.upsert({
-    where: { email: "maria.garcia@example.com" },
-    update: {},
-    create: {
-      email: "maria.garcia@example.com",
       role: UserRole.CLIENT,
-      profile: {
-        create: {
-          firstName: "Maria",
-          lastName: "Garcia",
-          phone: "(210) 555-0142",
-          zip: "78251",
-        },
-      },
+      email: { in: [...DEMO_CLIENT_EMAILS] },
     },
   });
-
-  const james = await prisma.user.upsert({
-    where: { email: "james.wilson@example.com" },
-    update: {},
-    create: {
-      email: "james.wilson@example.com",
-      role: UserRole.CLIENT,
-      profile: {
-        create: {
-          firstName: "James",
-          lastName: "Wilson",
-          phone: "(305) 555-0198",
-          zip: "33101",
-        },
-      },
-    },
-  });
-
-  await prisma.lead.deleteMany({
-    where: { userId: { in: [maria.id, james.id] } },
-  });
-
-  const lead = await prisma.lead.create({
-    data: {
-      userId: maria.id,
-      statusId: unseenStatus.id,
-      flowId: flow.id,
-      preferredCallTimeId: morningCallTime.id,
-      source: LeadSource.INTAKE_FLOW,
-      coverageType: "under_65",
-      message: "Looking for a lower premium for my family of four.",
-    },
-  });
-
-  await prisma.leadAnswer.createMany({
-    data: [
-      {
-        leadId: lead.id,
-        questionId: coverageQuestion.id,
-        edgeId: coverageEdge.id,
-        value: { choiceKey: "under_65", label: coverageEdge.choiceLabel },
-      },
-      {
-        leadId: lead.id,
-        questionId: concernQuestion.id,
-        edgeId: concernEdge.id,
-        value: { choiceKey: "monthly_cost", label: concernEdge.choiceLabel },
-      },
-    ],
-  });
-
-  await prisma.lead.create({
-    data: {
-      userId: maria.id,
-      statusId: calledStatus.id,
-      source: LeadSource.QUOTE_FORM,
-      coverageType: "dental_vision",
-      message: "Earlier quote request for dental only.",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14),
-    },
-  });
-
-  await prisma.lead.create({
-    data: {
-      userId: james.id,
-      statusId: seenStatus.id,
-      source: LeadSource.QUOTE_FORM,
-      coverageType: "on_medicare",
-      message: "Turning 66 next month, want a plan review.",
-    },
-  });
+  console.log(`Deleted ${result.count} demo CLIENT user(s).`);
 }
 
 async function seedAdminUser() {
@@ -428,13 +342,13 @@ async function seedAdminUser() {
 }
 
 async function main() {
+  await deleteDemoClientUsers();
   await seedLeadStatuses();
   await seedPreferredCallTimes();
   await seedIntakeFlow();
-  await seedDemoLeads();
   await seedAdminUser();
   console.log(
-    "Seed complete: lead statuses, preferred call times, home-intake graph, demo leads, admin user.",
+    "Seed complete: demo CLIENT users removed; lead statuses, preferred call times, home-intake graph, admin user. CLIENT role remains for portal leads.",
   );
 }
 
