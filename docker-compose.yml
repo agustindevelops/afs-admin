@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: afs
+      POSTGRES_PASSWORD: afs
+      POSTGRES_DB: afs_admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - afs_admin_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afs -d afs_admin"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  afs_admin_pgdata:
