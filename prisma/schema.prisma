@@ -12,27 +12,39 @@ enum UserRole {
   CLIENT
 }
 
-model Client {
-  id        Int      @id @default(autoincrement())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum AnswerType {
+  SINGLE
+  MULTI
+  TEXT
+  EMAIL
+  PHONE
+  ZIP
+  BOOLEAN
+  DATE
+  CONSENT
+}
 
-  users User[]
+enum LeadSource {
+  QUOTE_FORM
+  INTAKE_FLOW
+}
+
+enum QuestionOutcome {
+  CREATE_LEAD
+  REDIRECT
+  COMPLETE
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  role      UserRole @default(CLIENT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  role         UserRole @default(CLIENT)
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  profile  Profile?
-  client   Client?  @relation(fields: [clientId], references: [id])
-  clientId Int?
-
-  @@index([clientId])
+  profile Profile?
+  leads   Lead[]
 }
 
 model Profile {
@@ -41,8 +53,116 @@ model Profile {
   firstName String?
   lastName  String?
   phone     String?
+  zip       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LeadStatus {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  label       String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  leads Lead[]
+}
+
+model IntakeFlow {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
+  name      String
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questions Question[]
+  leads     Lead[]
+}
+
+model Question {
+  id               Int        @id @default(autoincrement())
+  flowId           Int
+  key              String
+  prompt           String
+  helpText         String?
+  answerType       AnswerType
+  mapsToLeadField  String?
+  sortOrder        Int        @default(0)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  flow          IntakeFlow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  edgesFrom     QuestionEdge[] @relation("EdgeFrom")
+  edgesTo       QuestionEdge[] @relation("EdgeTo")
+  answers       LeadAnswer[]
+
+  @@unique([flowId, key])
+  @@index([flowId])
+}
+
+model QuestionEdge {
+  id                Int              @id @default(autoincrement())
+  fromQuestionId    Int
+  toQuestionId      Int?
+  choiceKey         String
+  choiceLabel       String
+  choiceDescription String?
+  outcome           QuestionOutcome?
+  redirectUrl       String?
+  sortOrder         Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  fromQuestion Question     @relation("EdgeFrom", fields: [fromQuestionId], references: [id], onDelete: Cascade)
+  toQuestion   Question?    @relation("EdgeTo", fields: [toQuestionId], references: [id], onDelete: SetNull)
+  answers      LeadAnswer[]
+
+  @@unique([fromQuestionId, choiceKey])
+  @@index([fromQuestionId])
+  @@index([toQuestionId])
+}
+
+model Lead {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  statusId     Int
+  flowId       Int?
+  source       LeadSource
+  coverageType String?
+  message      String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status  LeadStatus   @relation(fields: [statusId], references: [id])
+  flow    IntakeFlow?  @relation(fields: [flowId], references: [id], onDelete: SetNull)
+  answers LeadAnswer[]
+
+  @@index([userId])
+  @@index([statusId])
+  @@index([createdAt])
+  @@index([coverageType])
+  @@index([source])
+}
+
+model LeadAnswer {
+  id         Int      @id @default(autoincrement())
+  leadId     Int
+  questionId Int
+  edgeId     Int?
+  value      Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lead     Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  question Question      @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  edge     QuestionEdge? @relation(fields: [edgeId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([questionId])
+  @@index([edgeId])
 }
