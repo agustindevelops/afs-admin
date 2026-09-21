@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { logoutAction } from "@/app/login/actions";
+import { Button } from "@/components/ui/button";
+import { auth } from "@/auth";
 
-export function AdminShell({
+export async function AdminShell({
   children,
   title,
   description,
@@ -9,6 +12,8 @@ export function AdminShell({
   title: string;
   description?: string;
 }) {
+  const session = await auth();
+
   return (
     <div className="min-h-full bg-surface-page">
       <header className="bg-brand-navy-950 text-text-inverse">
@@ -31,6 +36,23 @@ export function AdminShell({
                 Leads
               </Link>
             </nav>
+          </div>
+          <div className="flex items-center gap-3">
+            {session?.user?.email ? (
+              <span className="hidden text-xs text-[#D6E4EA] sm:inline">
+                {session.user.email}
+              </span>
+            ) : null}
+            <form action={logoutAction}>
+              <Button
+                type="submit"
+                variant="outline"
+                size="sm"
+                className="border-white text-white hover:border-brand-gold-200 hover:bg-white/10 hover:text-brand-gold-200"
+              >
+                Sign out
+              </Button>
+            </form>
           </div>
         </div>
       </header>

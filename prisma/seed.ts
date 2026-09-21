@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { hash } from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   AnswerType,
@@ -730,11 +731,38 @@ async function seedDemoLeads() {
   });
 }
 
+async function seedAdminUser() {
+  const email = "cc.aegisfs@gmail.com";
+  const passwordHash = await hash("tempPassHHAISdev#1", 12);
+
+  await prisma.user.upsert({
+    where: { email },
+    update: {
+      role: UserRole.ADMIN,
+      passwordHash,
+    },
+    create: {
+      email,
+      role: UserRole.ADMIN,
+      passwordHash,
+      profile: {
+        create: {
+          firstName: "Aegis",
+          lastName: "Admin",
+        },
+      },
+    },
+  });
+}
+
 async function main() {
   await seedLeadStatuses();
   await seedIntakeFlow();
   await seedDemoLeads();
-  console.log("Seed complete: lead statuses, home-intake graph, demo leads.");
+  await seedAdminUser();
+  console.log(
+    "Seed complete: lead statuses, home-intake graph, demo leads, admin user.",
+  );
 }
 
 main()
