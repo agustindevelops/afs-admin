@@ -1,9 +1,19 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
-import NextAuth from "next-auth";
+import NextAuth, { type DefaultSession } from "next-auth";
+// Import loads the module so the JWT augmentation below can merge.
+// https://authjs.dev/getting-started/typescript#module-augmentation
+import type { JWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import type { UserRole } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    role?: UserRole;
+  }
+}
 
 declare module "next-auth" {
   interface User {
@@ -13,16 +23,8 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      email: string;
       role: UserRole;
-    };
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id?: string;
-    role?: UserRole;
+    } & DefaultSession["user"];
   }
 }
 
@@ -72,7 +74,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }): Promise<JWT> {
       if (user) {
         token.id = user.id;
         token.role = user.role;
